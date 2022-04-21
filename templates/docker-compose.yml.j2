@@ -1,0 +1,70 @@
+rocketchat:
+  image: {{ rocketchat_configs.rocketchat_image }}:{{ rocketchat_configs.rocketchat_version }}
+  command: >
+    bash -c
+      "for i in `seq 1 30`; do
+        node main.js &&
+        s=$$? && break || s=$$?;
+        echo \"Tried $$i times. Waiting 5 secs...\";
+        sleep 5;
+      done; (exit $$s)"
+  restart: unless-stopped
+  volumes:
+    - {{ rocketchat_configs.rocketchat_volume }}
+  environment:
+    - PORT={{ rocketchat_configs.port }}
+    - ROOT_URL={{ rocketchat_configs.root_url }}
+    - MONGO_URL={{ rocketchat_configs.mongo_url }}
+    - MONGO_OPLOG_URL={{ rocketchat_configs.mongo_oplog_url }}
+    - MAIL_URL={{ rocketchat_configs.mail_url }}
+  depends_on:
+    - mongo
+  ports:
+    - {{ rocketchat_configs.port }}:{{ rocketchat_configs.port }}
+  labels:
+    - "traefik.backend=rocketchat"
+    - "traefik.frontend.rule=Host: your.domain.tld"
+
+mongo:
+  image: {{ rocketchat_configs.mongo_image }}
+  restart: unless-stopped
+  volumes:
+   - {{ rocketchat_configs.mongo_volume }}
+  command: mongod --smallfiles --oplogSize 128 --replSet rs0 --storageEngine=mmapv1
+  labels:
+    - "traefik.enable=false"
+    
+mongo-init-replica:
+  image: {{ rocketchat_configs.mongo_image }}
+  command: >
+    bash -c
+      "for i in `seq 1 30`; do
+        mongo mongo/rocketchat --eval \"
+          rs.initiate({
+            _id: 'rs0',
+            members: [ { _id: 0, host: 'localhost:27017' } ]})\" &&
+        s=$$? && break || s=$$?;
+        echo \"Tried $$i times. Waiting 5 secs...\";
+        sleep 5;
+      done; (exit $$s)"
+  depends_on:
+    - mongo
+
+hubot:
+  image: {{ rocketchat_configs.hubot_image }}
+  restart: unless-stopped
+  environment:
+    - ROCKETCHAT_URL={{ rocketchat_configs.rocketchat_url }}
+    - ROCKETCHAT_ROOM={{ rocketchat_configs.rocketchat_room }}
+    - ROCKETCHAT_USER={{ rocketchat_configs.rocketchat_user }}
+    - ROCKETCHAT_PASSWORD={{ rocketchat_configs.rocketchat_password }}
+    - BOT_NAME={{ rocketchat_configs.bot_name }
+    - EXTERNAL_SCRIPTS=hubot-help,hubot-seen,hubot-links,hubot-diagnostics
+  depends_on:
+    - rocketchat
+  labels:
+    - "traefik.enable=false"
+  volumes:
+    - {{ rocketchat_configs.hubot_volume }}
+  ports:
+    - {{ rocketchat_configs.hubot_ports }}

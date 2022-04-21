@@ -1,0 +1,21 @@
+---
+rocketchat_folder: ""
+rocketchat_configs:
+  rocketchat_version: ""
+  rocketchat_image: registry.rocket.chat/rocketchat/rocket.chat
+  rocketchat_volume: ./uploads:/app/uploads
+  port: 3000
+  root_url: http://localhost:3000
+  mongo_url: mongodb://mongo:27017/rocketchat
+  mongo_oplog_url: mongodb://mongo:27017/local
+  mail_url: smtp://smtp.email
+  rocketchat_url: rocketchat:3000
+  rocketchat_room: GENERAL
+  rocketchat_user: bot
+  bot_name: bot
+  hubot_ports: 3001:8080
+  mongo_image: mongo:4.0
+  mongo_volume: ./data/db:/data/db
+  hubot_image: rocketchat/hubot-rocketchat:latest
+  hubot_volume: ./scripts:/home/hubot/scripts
+  rocketchat_password: password
